@@ -7,3 +7,6 @@
 data/ham10000/*
 data/aptos-2019/*
 checkpoints/*
+
+*.png
+*.txt
