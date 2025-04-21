@@ -11,6 +11,12 @@ def validation_accuracy(model, loader, device, mode = 'rein'):
         outputs = model.linear(f)
         return outputs
     
+    def dual_rein(model, inputs):
+        f = model.forward_dual_features(inputs)
+        f = f[:, 0, :]
+        outputs = model.linear_rein(f)
+        return outputs
+    
     def rein(model, inputs):
         f = model.forward_features(inputs)
         f = f[:, 0, :]
@@ -22,8 +28,12 @@ def validation_accuracy(model, loader, device, mode = 'rein'):
         f = f[:, 0, :]
         outputs = model.linear(f)
         return outputs
+    
+    
     if mode == 'rein':
         out = rein
+    elif mode == 'dual':
+        out = dual_rein
     elif mode == 'no_rein':
         out = no_rein
     else:

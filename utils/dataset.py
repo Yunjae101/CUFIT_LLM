@@ -80,7 +80,7 @@ def get_noise_dataset(path, noise_rate = 0.2, batch_size = 32, seed = 0):
 
     valid_data = torchvision.datasets.ImageFolder(path + '/test', test_transform)
     
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers = 8)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers = 8, drop_last=True)
     valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers = 8)
     return train_loader, valid_loader
 
