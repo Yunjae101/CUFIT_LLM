@@ -18,7 +18,7 @@ def train():
     parser.add_argument('--save_path', '-s', type=str)
     args = parser.parse_args()
 
-    config = utils.read_conf('conf/'+args.data+'.json')
+    config = utils.read_conf('conf/'+args.data+'_h100.json')
     device = 'cuda:'+args.gpu
     save_path = os.path.join(config['save_path'], args.save_path)
     data_path = config['id_dataset']
