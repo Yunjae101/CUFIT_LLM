@@ -25,7 +25,7 @@ class APTOS2019():
                 if len(line) == 2:
                     img_name, label = line
                     
-                    img_name = os.path.join(root_dir, 'train_images/train_images' if train else 'test_images', img_name+'.png')
+                    img_name = os.path.join(root_dir, 'train_images/train_images' if train else 'test_images/test_images', img_name+'.png')
                     label = label.replace('\n', '')
                     label = int(label)
 

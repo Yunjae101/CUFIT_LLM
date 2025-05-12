@@ -33,8 +33,8 @@ def train():
 
     if args.data == 'ham10000':
         train_loader, valid_loader = utils.get_clean_dataset(data_path, batch_size = batch_size)
-    # elif args.data == 'aptos':
-    #     train_loader, valid_loader = utils.get_aptos_noise_dataset(data_path, noise_rate=noise_rate, batch_size = batch_size)
+    elif args.data == 'aptos':
+        train_loader, valid_loader = utils.get_clean_aptos_dataset(data_path, batch_size = batch_size)
     # elif 'mnist' in args.data:
     #     train_loader, valid_loader = utils.get_mnist_noise_dataset(args.data, noise_rate=noise_rate, batch_size = batch_size)
     # elif 'cifar' in args.data:

@@ -235,6 +235,15 @@ def get_clean_dataset(path, batch_size = 32):
     valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers = 8)
     return train_loader, valid_loader
 
+def get_clean_aptos_dataset(path, batch_size = 32):
+    train_transform, test_transform = get_transform()
+    train_data = APTOS2019(path, train=True, transforms = train_transform)
+    valid_data = APTOS2019(path, train=False, transforms = test_transform)
+    
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers = 8)
+    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers = 8)
+    return train_loader, valid_loader
+
 # if __name__=='__main__':
 #     noise_loader = read_noise_datalist('/SSDc/yunjae_heo/CUFIT_LLM', batch_size=1)
 #     # 모델 평가 시:

@@ -40,9 +40,10 @@ def train():
     parser.add_argument('--netsize', default='s', type=str)
     parser.add_argument('--save_path', '-s', type=str)
     parser.add_argument('--noise_rate', '-n', type=float, default=0.2)
-    parser.add_argument('--alpha', '-a', type=float, default=0.95)
-    parser.add_argument('--beta', '-b', type=float, default=0.2)
-    parser.add_argument('--refine_epoch', '-r', type=int, default=50)
+    parser.add_argument('--low', type=float, default=0.4)
+    parser.add_argument('--high', type=float, default=0.5)
+    parser.add_argument('--duration', type=float, default=10)
+    parser.add_argument('--refine_epoch', '-r', type=int, default=0)
     args = parser.parse_args()
 
     config = utils.read_conf('conf/'+args.data+'_h100.json')
@@ -52,6 +53,7 @@ def train():
     batch_size = int(config['batch_size'])
     max_epoch = int(config['epoch'])
     noise_rate = args.noise_rate
+    num_classes = config['num_classes']
 
     if not os.path.exists(save_path):
         os.mkdir(save_path)
@@ -126,6 +128,11 @@ def train():
         correct_linear = 0
         sum_linear1 = 0
         sum_linear2 = 0
+        sum_changed1 = 0
+        sum_changed2 = 0
+        step = (args.high - args.low) / args.duration
+        decay_step = epoch // (max_epoch // args.duration)
+        mix_ratio = args.high - step * decay_step
         for batch_idx, (inputs, targets) in enumerate(train_loader):
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
@@ -151,10 +158,12 @@ def train():
                 pred_indices = pred.indices
                 pred_confidences = pred.values
                 if epoch >= args.refine_epoch:
-                    # targets_ = args.alpha*F.one_hot(targets_, num_classes=7).to(targets.device) + softmax_outputs_
-                    targets_ = args.alpha*F.one_hot(targets_, num_classes=7).to(targets.device) + (1-args.alpha)*softmax_outputs_
+                    old_targets_ = targets_
+                    targets_ = mix_ratio*F.one_hot(targets_, num_classes=num_classes).to(targets.device) + (1-mix_ratio)*softmax_outputs_
                     targets_dist = torch.softmax(targets_, dim=-1)
                     targets_ = targets_dist.max(1).indices
+                    changed = (old_targets_ != targets_)
+                    sum_changed1 += sum(changed)
                 linear_accurate = (pred_indices==targets_)
                 sum_linear1 += sum(linear_accurate)
 
@@ -164,9 +173,12 @@ def train():
                 pred2_indices = pred2.indices
                 pred2_confidences = pred2.values
                 if epoch >= args.refine_epoch:
-                    targets__ = args.alpha*F.one_hot(targets__, num_classes=7).to(targets.device) + (1-args.alpha)*softmax_outputs
+                    old_targets__ = targets__
+                    targets__ = mix_ratio*F.one_hot(targets__, num_classes=num_classes).to(targets.device) + (1-mix_ratio)*softmax_outputs
                     targets__dist = torch.softmax(targets__, dim=-1)
                     targets__ = targets__dist.max(1).indices
+                    changed = (old_targets__ != targets__)
+                    sum_changed2 += sum(changed)
                 linear_accurate2 = (pred2_indices==targets__)
                 sum_linear2 += sum(linear_accurate2)
 
@@ -175,18 +187,6 @@ def train():
                 loss_rein = linear_accurate*criterion(outputs, targets_)
                 loss_rein2 = linear_accurate2*criterion(outputs2, targets__)
             else:
-                # print(pred_confidences.shape)
-                # print(F.log_softmax(outputs_, dim=1).shape)
-                # loss_linear = criterion(outputs_, targets) - \
-                #     args.beta * torch.sum(softmax_outputs_*F.log_softmax(outputs_, dim=1), dim=1)
-                # loss_rein = linear_accurate*cross_entropy_soft_label(outputs, targets_dist) - \
-                #     args.beta * torch.sum(softmax_outputs*F.log_softmax(outputs, dim=1), dim=1)
-                # loss_rein2 = linear_accurate2*cross_entropy_soft_label(outputs2, targets__dist)
-                
-                # loss_linear = criterion(outputs_, targets)
-                # loss_rein = linear_accurate*criterion(outputs, targets_)
-                # loss_rein2 = linear_accurate2*criterion(outputs2, targets__)
-                
                 loss_linear = criterion(outputs_, targets)
                 loss_rein = linear_accurate*cross_entropy_soft_label(outputs, targets_dist)
                 loss_rein2 = linear_accurate2*cross_entropy_soft_label(outputs2, targets__dist)
@@ -209,8 +209,8 @@ def train():
 
             _, predicted = outputs_[:len(targets)].max(1)            
             correct_linear += predicted.eq(targets).sum().item()   
-            print('\r', batch_idx, len(train_loader), 'Loss: %.3f | Acc2: %.3f%% | Acc1: %.3f%% | LinearAcc: %.3f%% | (%d/%d) | LA1 : %d | LA2 : %d '
-                        % (total_loss/(batch_idx+1), 100.*correct2/total, 100.*correct/total, 100.*correct_linear/total, correct, total, sum_linear1, sum_linear2), end = '')                       
+            print('\r', batch_idx, len(train_loader), 'Loss: %.3f | Acc2: %.3f%% | Acc1: %.3f%% | LinearAcc: %.3f%% | (%d/%d) | LA1 : %d | LA2 : %d | Ch1 : %d | Ch2 : %d'
+                        % (total_loss/(batch_idx+1), 100.*correct2/total, 100.*correct/total, 100.*correct_linear/total, correct, total, sum_linear1, sum_linear2, sum_changed1, sum_changed2), end = '')                       
         train_accuracy = correct/total
         train_avg_loss = total_loss/len(train_loader)
         print()
